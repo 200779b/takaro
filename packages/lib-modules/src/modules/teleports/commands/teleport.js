@@ -10,20 +10,21 @@ async function main() {
 
   const ownedTeleportRes = await findTp(args.tp, pog.playerId);
 
-  let teleports = ownedTeleportRes.data.data;
-
+  let privateTeleports = ownedTeleportRes.data.data;
+  let allTeleports;
+  
   if (mod.userConfig.allowPublicTeleports) {
     const maybePublicTeleportRes = await findTp(args.tp);
 
     const publicTeleports = maybePublicTeleportRes.data.data.filter((tele) => {
       const teleport = JSON.parse(tele.value);
-      return teleport.public;
+      return teleport.public && !ownedTeleportIds.has(tele.id);
     });
 
-    teleports = teleports.concat(publicTeleports);
+    allTeleports = privateTeleports.concat(publicTeleports);
   }
 
-  if (teleports.length === 0) {
+  if (allTeleports.length === 0) {
     throw new TakaroUserError(`Teleport ${args.tp} does not exist.`);
   }
 
@@ -60,9 +61,12 @@ async function main() {
         throw new TakaroUserError('You cannot teleport yet. Please wait before trying again.');
       }
     }
-
-    const teleport = JSON.parse(teleports[0].value);
-
+  if (teleports.length === 1) {
+    const teleport = JSON.parse(allTeleports[0].value);
+  } else {
+    data.player.pm(`You are going to be teleported to your teleport, but there is a public teleport with the same name. To use the public teleport, delete your teleport and recreate it using a different name.`);
+    const teleport = JSON.parse(privateTeleports[0].value);
+  }
     await takaro.gameserver.gameServerControllerTeleportPlayer(gameServerId, pog.playerId, {
       x: teleport.x,
       y: teleport.y,
